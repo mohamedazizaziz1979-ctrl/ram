@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>منصة LingoLearn - الاختبار الشامل والتسميع التفاعلي</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap');
+        body { font-family: 'Cairo', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-100 min-h-screen flex flex-col justify-between relative overflow-x-hidden">
+
+    <div class="fixed right-4 top-1/2 -translate-y-1/2 flex flex-col gap-3 z-50">
+        <!-- زر إعادة الاختبار -->
+        <button onclick="restartCurrentTab()" title="إعادة الاختبار" 
+            class="w-12 h-12 rounded-full bg-white text-indigo-600 shadow-lg border border-slate-200 flex items-center justify-center hover:bg-indigo-600 hover:text-white transition-all duration-300 group">
+            <i class="fa-solid fa-rotate-right text-lg group-hover:rotate-180 transition-transform duration-500"></i>
+        </button>
+
+        <!-- دائرة العداد الزمني العائمة -->
+        <div id="timer-box" title="الوقت المتبقي لكل سؤال (60 ثانية)" 
+            class="w-12 h-12 rounded-full bg-amber-500 text-white shadow-lg border-2 border-amber-300 flex flex-col items-center justify-center font-bold text-xs">
+            <i class="fa-regular fa-clock text-[10px]"></i>
+            <span id="timer">60</span>
+        </div>
+
+        <!-- شعار المادة -->
+        <div title="إعداد مستر محمد عبد العزيز" 
+            class="w-12 h-12 rounded-full bg-slate-900 text-white shadow-lg border border-slate-700 flex items-center justify-center cursor-default">
+            <i class="fa-solid fa-graduation-cap text-sm"></i>
+        </div>
+    </div>
+
+    <header class="bg-gradient-to-r from-indigo-700 to-indigo-900 text-white py-4 px-6 shadow-md flex justify-between items-center flex-wrap gap-4">
+        <div class="flex items-center gap-3">
+            <div class="text-3xl">🎓</div>
+            <div>
+                <h1 class="text-xl font-bold">LingoLearn</h1>
+                <span class="text-xs text-sky-300 font-semibold block">الصف الأول الإعدادي - الوحدة الثانية (الدرس 5 / 6)</span>
+                <span class="text-[11px] text-slate-300">إعداد مستر محمد عبد العزيز</span>
+            </div>
+        </div>
+        <div class="flex items-center gap-3">
+            <select id="voiceSelect" class="bg-white/15 border border-white/30 text-white text-sm rounded-lg px-3 py-2 outline-none cursor-pointer">
+                <option>Google UK English Male</option>
+            </select>
+        </div>
+    </header>
+
+    <div class="bg-slate-200 py-3 px-4 shadow-inner flex justify-center gap-2 flex-wrap">
+        <button class="nav-tab active bg-white text-indigo-700 font-bold px-4 py-2 rounded-xl shadow transition text-sm flex items-center gap-2" onclick="switchTab('vocabTab', this)"><i class="fa-solid fa-book"></i> بنك الكلمات الشامل</button>
+        <button class="nav-tab bg-transparent text-slate-600 font-bold px-4 py-2 rounded-xl hover:bg-white/50 transition text-sm flex items-center gap-2" onclick="switchTab('extraTab', this)"><i class="fa-solid fa-puzzle-piece"></i> المتلازمات والقواعد</button>
+        <button class="nav-tab bg-transparent text-indigo-700 font-bold px-4 py-2 rounded-xl hover:bg-white/50 transition text-sm border-2 border-indigo-600 flex items-center gap-2" onclick="switchTab('dictationTab', this)"><i class="fa-solid fa-headphones"></i> اختبار التسميع</button>
+        <button class="nav-tab bg-transparent text-slate-600 font-bold px-4 py-2 rounded-xl hover:bg-white/50 transition text-sm flex items-center gap-2" onclick="switchTab('comprehensiveQuizTab', this)"><i class="fa-solid fa-trophy text-amber-500"></i> الاختبار الشامل (20 سؤالاً)</button>
+    </div>
+
+    <main class="max-w-4xl w-full mx-auto p-4 flex-1 my-6">
+
+        <!-- 1. بنك الكلمات -->
+        <div id="vocabTab" class="tab-content hidden">
+            <div class="bg-white rounded-3xl p-6 shadow-xl border border-slate-200">
+                <h2 class="text-xl font-bold text-indigo-700 mb-4 pb-2 border-b flex items-center gap-2">🌟 Key Vocabulary (الكلمات الرئيسية)</h2>
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4" id="fullVocabGrid"></div>
+            </div>
+        </div>
+
+        <!-- 2. المتلازمات والقواعد -->
+        <div id="extraTab" class="tab-content hidden">
+            <div class="bg-white rounded-3xl p-6 shadow-xl border border-slate-200">
+                <h2 class="text-xl font-bold text-indigo-700 mb-4 pb-2 border-b flex items-center gap-2">📌 التعريفات، المتلازمات والمقاطع</h2>
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4" id="extraGrid"></div>
+            </div>
+        </div>
+
+        <!-- 3. اختبار التسميع الصوتي -->
+        <div id="dictationTab" class="tab-content block">
+            <div class="bg-white rounded-3xl shadow-xl p-6 sm:p-8 border border-slate-200 relative overflow-hidden">
+                <div class="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-indigo-500 to-purple-600"></div>
+
+                <!-- إدخال اسم الطالب ثلاثياً لاختبار التسميع -->
+                <div id="dictation-start-screen" class="text-center py-6 space-y-4">
+                    <div class="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto text-3xl shadow-inner">
+                        <i class="fa-solid fa-user-pen"></i>
+                    </div>
+                    <h3 class="text-2xl font-black text-slate-800">🎧 اختبار التسميع الصوتي (English Dictation)</h3>
+                    <p class="text-sm text-slate-500">يجب إدخال اسمك الثلاثي أولاً لبدء الاختبار (60 ثانية لكل كلمة)</p>
+                    <div class="max-w-md mx-auto space-y-3">
+                        <input type="text" id="dictation-student-name" placeholder="اكتب اسمك الثلاثي هنا (مثال: محمد أحمد علي)..." 
+                            class="w-full text-center px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-indigo-600 focus:outline-none font-bold text-slate-800 bg-slate-50">
+                        <button onclick="startDictationTest()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition shadow-lg flex items-center justify-center gap-2 text-lg">
+                            <span>ابدأ اختبار التسميع</span>
+                            <i class="fa-solid fa-arrow-left"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="dictation-quiz-container" class="hidden">
+                    <div class="flex justify-between items-center text-xs sm:text-sm text-slate-500 mb-6 bg-slate-50 p-3 rounded-2xl border">
+                        <span id="question-progress" class="font-bold text-indigo-600">السؤال 1</span>
+                        <span class="font-bold text-slate-700">الطالب الثلاثي: <span id="display-dict-student" class="text-indigo-600"></span></span>
+                        <span id="score-display" class="font-bold text-indigo-600">الدرجة: 0</span>
+                    </div>
+
+                    <div id="quiz-body">
+                        <div class="text-center mb-6">
+                            <span id="category-badge" class="inline-block text-[11px] uppercase tracking-wider bg-indigo-50 text-indigo-600 font-bold px-3 py-1 rounded-md mb-3">الفئة</span>
+                            <div class="flex flex-col items-center justify-center gap-4 bg-slate-50 py-6 px-4 rounded-3xl border border-slate-100 shadow-inner">
+                                <h2 id="meaning-text" class="text-2xl sm:text-3xl font-extrabold text-slate-800">
+                                    جاري التحميل...
+                                </h2>
+                                <!-- زر سماعة لنطق الكلمة بالإنجليزية بناءً على المعنى -->
+                                <button onclick="playCurrentDictationWord()" class="w-16 h-16 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full flex items-center justify-center text-2xl shadow-xl transition-transform hover:scale-105" title="استمع للكلمة بالإنجليزية">
+                                    <i class="fa-solid fa-volume-high"></i>
+                                </button>
+                                <span class="text-xs text-slate-400 font-semibold">اضغط على السماعة للاستماع للكلمة باللكنة البريطانية (Google UK Male)</span>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-6">
+                            <label class="block text-slate-700 font-bold mb-2 text-sm">اكتب الإجابة باللغة الإنجليزية:</label>
+                            <div class="relative">
+                                <input type="text" id="user-answer" autocomplete="off" placeholder="Type the English word here..." 
+                                    class="w-full text-left px-5 py-4 rounded-2xl border-2 border-slate-200 focus:border-indigo-600 focus:outline-none text-xl font-semibold text-slate-800 bg-slate-50 shadow-sm transition"
+                                    dir="ltr">
+                                <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                                    <i class="fa-solid fa-pen"></i>
+                                </span>
+                            </div>
+                            <p class="text-xs text-slate-400 mt-2">ملاحظة: النظام لا يتأثر بالحروف الكبيرة أو الصغيرة.</p>
+                        </div>
+
+                        <button id="submit-btn" onclick="checkAnswer()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-2xl transition shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 text-lg">
+                            <span>إرسال الإجابة</span>
+                            <i class="fa-solid fa-arrow-left"></i>
+                        </button>
+                        
+                        <div id="feedback-box" class="mt-4 hidden p-4 rounded-2xl text-center font-bold text-lg"></div>
+                    </div>
+
+                    <!-- شاشة النتيجة النهائية للتسميع -->
+                    <div id="result-screen" class="hidden text-center py-8 space-y-4">
+                        <div class="w-20 h-20 bg-amber-100 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-4 text-4xl shadow-inner animate-bounce">
+                            <i class="fa-solid fa-trophy"></i>
+                        </div>
+                        <h2 class="text-3xl font-extrabold text-slate-800 mb-2">أحسنت! انتهى اختبار التسميع</h2>
+                        <div id="dict-result-details" class="bg-slate-50 p-6 rounded-3xl max-w-md mx-auto space-y-3 text-slate-700 font-bold border">
+                            <!-- تفاصيل النتيجة -->
+                        </div>
+                        <div class="flex gap-3 justify-center pt-4 flex-wrap">
+                            <button onclick="restartDictation()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-6 py-3 rounded-xl transition shadow-lg">
+                                إعادة الاختبار <i class="fa-solid fa-rotate-right mr-2"></i>
+                            </button>
+                            <button onclick="shareDictationWhatsApp()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-3 rounded-xl transition shadow-lg flex items-center gap-2">
+                                <i class="fa-brands fa-whatsapp text-xl"></i> إرسال النتيجة للمعلم عبر واتساب
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. الاختبار الشامل (20 سؤالاً) -->
+        <div id="comprehensiveQuizTab" class="tab-content hidden max-w-3xl mx-auto">
+            <div class="bg-white rounded-3xl shadow-2xl p-6 sm:p-8 border border-slate-200 relative overflow-hidden">
+                <div class="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600"></div>
+
+                <!-- شاشة إدخال اسم الطالب ثلاثياً للاختبار الشامل -->
+                <div id="quiz-start-screen" class="text-center py-8 space-y-6">
+                    <div class="w-20 h-20 bg-gradient-to-tr from-indigo-600 to-purple-500 text-white rounded-3xl flex items-center justify-center mx-auto text-4xl shadow-lg">
+                        <i class="fa-solid fa-user-graduate"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-2xl sm:text-3xl font-black text-slate-800 mb-1">🏆 الاختبار الشامل</h2>
+                        <p class="text-sm font-bold text-indigo-600 mb-2">الصف الأول الإعدادي - الوحدة الثانية (الدرس 5 & 6)</p>
+                        <p class="text-xs sm:text-sm text-slate-500">امتحان تفاعلي شامل يضم 20 سؤالاً (60 ثانية لكل سؤال)</p>
+                    </div>
+                    <div class="max-w-md mx-auto space-y-4">
+                        <input type="text" id="student-name-input" placeholder="اكتب اسمك الثلاثي هنا (مثال: محمد أحمد علي)..." 
+                            class="w-full text-center px-5 py-4 rounded-2xl border-2 border-slate-200 focus:border-indigo-600 focus:outline-none text-lg font-bold text-slate-800 bg-slate-50 shadow-sm transition">
+                        <button onclick="startComprehensiveQuiz()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-2xl transition shadow-lg shadow-indigo-600/30 text-lg flex items-center justify-center gap-2">
+                            <span>ابدأ الاختبار الآن</span>
+                            <i class="fa-solid fa-arrow-left"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- حاوية الأسئلة -->
+                <div id="quiz-questions-container" class="hidden space-y-6">
+                    <div class="flex justify-between items-center text-xs sm:text-sm text-slate-500 bg-slate-50 p-3 rounded-2xl border">
+                        <span id="comp-progress-text" class="font-bold text-indigo-600">السؤال 1 من 20</span>
+                        <span class="font-bold text-slate-700">الطالب الثلاثي: <span id="display-student-name" class="text-indigo-600"></span></span>
+                    </div>
+
+                    <!-- شريط التقدم -->
+                    <div class="w-full bg-slate-200 h-3 rounded-full overflow-hidden shadow-inner">
+                        <div id="comp-progress-bar" class="bg-indigo-600 h-full w-0 transition-all duration-300"></div>
+                    </div>
+
+                    <!-- صياغة السؤال -->
+                    <div class="p-6 bg-slate-50 rounded-3xl border border-slate-200 shadow-sm">
+                        <h3 id="comp-q-title" class="text-xl sm:text-2xl font-black text-slate-900 leading-relaxed text-left" dir="ltr">
+                            <!-- Question rendered by JS -->
+                        </h3>
+                    </div>
+
+                    <!-- الخيارات في إيقونات ملونة وعائمة -->
+                    <div id="comp-options-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                        <!-- Options rendered by JS -->
+                    </div>
+
+                    <button id="comp-next-btn" onclick="nextCompQuestion()" class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-4 rounded-2xl transition shadow-lg hidden flex items-center justify-center gap-2 text-lg">
+                        <span>السؤال التالي</span>
+                        <i class="fa-solid fa-arrow-left"></i>
+                    </button>
+                </div>
+
+                <!-- شاشة نتيجة الاختبار الشامل النهائية -->
+                <div id="comp-result-screen" class="hidden text-center py-8 space-y-6">
+                    <div class="w-24 h-24 bg-gradient-to-tr from-amber-400 to-yellow-300 text-white rounded-full flex items-center justify-center mx-auto text-5xl shadow-xl animate-bounce">
+                        🏆
+                    </div>
+                    <div>
+                        <h2 class="text-3xl font-black text-slate-800 mb-1">النتيجة النهائية للاختبار</h2>
+                        <p class="text-slate-500 font-bold text-lg" id="comp-result-student-name"></p>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-lg mx-auto">
+                        <div class="bg-indigo-50 p-4 rounded-2xl border border-indigo-100 shadow-sm">
+                            <span class="block text-xs text-indigo-500 font-bold">الدرجة النهائية</span>
+                            <span id="res-final-score" class="text-2xl font-black text-indigo-700">0 / 20</span>
+                        </div>
+                        <div class="bg-emerald-50 p-4 rounded-2xl border border-emerald-100 shadow-sm">
+                            <span class="block text-xs text-emerald-500 font-bold">إجابات صحيحة</span>
+                            <span id="res-correct" class="text-2xl font-black text-emerald-700">0</span>
+                        </div>
+                        <div class="bg-rose-50 p-4 rounded-2xl border border-rose-100 shadow-sm">
+                            <span class="block text-xs text-rose-500 font-bold">إجابات خاطئة</span>
+                            <span id="res-wrong" class="text-2xl font-black text-rose-700">0</span>
+                        </div>
+                        <div class="bg-purple-50 p-4 rounded-2xl border border-purple-100 shadow-sm">
+                            <span class="block text-xs text-purple-500 font-bold">النسبة المئوية</span>
+                            <span id="res-percentage" class="text-2xl font-black text-purple-700">0%</span>
+                        </div>
+                    </div>
+
+                    <div class="p-4 bg-slate-50 rounded-2xl text-slate-700 font-bold text-lg border max-w-md mx-auto" id="comp-encouragement">
+                        أداء ممتاز! استمر في التقدم.
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row gap-3 justify-center pt-2">
+                        <button onclick="restartComprehensiveQuiz()" class="bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold px-6 py-4 rounded-2xl transition shadow">
+                            إعادة الاختبار <i class="fa-solid fa-rotate-right mr-2"></i>
+                        </button>
+                        <button onclick="shareWhatsApp()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-8 py-4 rounded-2xl transition shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2 text-lg">
+                            <i class="fa-brands fa-whatsapp text-2xl"></i>
+                            <span>إرسال النتيجة للمعلم عبر واتساب</span>
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </main>
+
+    <footer class="bg-slate-900 text-slate-400 text-center py-4 text-sm mt-10">
+        جميع الحقوق محفوظة &copy; 2026 - منصة LingoLearn | إعداد مستر محمد عبد العزيز
+    </footer>
+
+    <script>
+        const allVocabs = [
+            { word: "plan", meaning: "خطة / يخطط" },
+            { word: "practice", meaning: "يتدرب / تدريب" },
+            { word: "communication", meaning: "تواصل" },
+            { word: "record", meaning: "يسجل" },
+            { word: "mistake", meaning: "خطأ" },
+            { word: "reflect", meaning: "يتأمل / يفكر ملياً" },
+            { word: "journal", meaning: "يوميات / سجل يومي" },
+            { word: "remind", meaning: "يذكر بـ" },
+            { word: "include", meaning: "يشمل / يتضمن" },
+            { word: "discover", meaning: "يكتشف" },
+            { word: "indicate", meaning: "يدل على / يشير إلى" },
+            { word: "pronunciation", meaning: "نطق (صوتي)" },
+            { word: "voice", meaning: "صوت بشري" },
+            { word: "habits", meaning: "عادات" },
+            { word: "starter", meaning: "بداية" },
+            { word: "list", meaning: "يسجل في قائمة" },
+            { word: "until", meaning: "حتى / لغاية" },
+            { word: "reach", meaning: "يصل إلى هدف" },
+            { word: "advice", meaning: "نصيحة" }
+        ];
+
+        const extraData = [
+            { word: "make videos", meaning: "يعد / يصور فيديوهات (متلازمة)" },
+            { word: "take steps", meaning: "يتخذ خطوات (متلازمة)" },
+            { word: "reach a goal", meaning: "يحقق هدفاً (متلازمة)" },
+            { word: "give advice", meaning: "يقدم نصيحة (متلازمة)" },
+            { word: "train", meaning: "مرادف كلمة practice" },
+            { word: "attempt", meaning: "مرادف كلمة try" },
+            { word: "-ion", meaning: "لاحقة لتكوين الاسم من الفعل" },
+            { word: "-ly", meaning: "لاحقة لتحويل الصفة لظرف" }
+        ];
+
+        const dictationData = [
+            { word: "plan", meaning: "خطة أو يخطط", category: "الكلمات الرئيسية" },
+            { word: "practice", meaning: "يتدرب أو يمارس", category: "الكلمات الرئيسية" },
+            { word: "communication", meaning: "تواصل أو إتصال", category: "الكلمات الرئيسية" },
+            { word: "record", meaning: "يسجل صوت أو فيديو", category: "الكلمات الرئيسية" },
+            { word: "mistake", meaning: "خطأ", category: "الكلمات الرئيسية" },
+            { word: "reflect", meaning: "يتأمل أو يعكس تفكيرًا", category: "الكلمات الرئيسية" },
+            { word: "journal", meaning: "دفتر يوميات أو سجل", category: "الكلمات الرئيسية" },
+            { word: "remind", meaning: "يذكر شخصًا بـ", category: "الكلمات الرئيسية" },
+            { word: "include", meaning: "يضمن أو يشمل", category: "الكلمات الرئيسية" },
+            { word: "discover", meaning: "يكتشف", category: "الكلمات الرئيسية" },
+            { word: "indicate", meaning: "يشير إلى أو يدل على", category: "الكلمات الرئيسية" },
+            { word: "pronunciation", meaning: "نطق الكلمات", category: "الكلمات الرئيسية" },
+            { word: "voice", meaning: "صوت الإنسان", category: "الكلمات الرئيسية" },
+            { word: "habits", meaning: "عادات يومية", category: "الكلمات الرئيسية" },
+            { word: "starter", meaning: "بداية أو مقبلات", category: "الكلمات الرئيسية" },
+            { word: "list", meaning: "قائمة / يدرج في قائمة", category: "الكلمات الرئيسية" },
+            { word: "until", meaning: "حتى (للوقت)", category: "الكلمات الرئيسية" },
+            { word: "reach", meaning: "يصل إلى هدف", category: "الكلمات الرئيسية" },
+            { word: "advice", meaning: "نصيحة (اسم غير معدود)", category: "الكلمات الرئيسية" },
+            { word: "make videos", meaning: "يعد / يصور فيديوهات", category: "متلازمات لفظية (Collocations)" },
+            { word: "take steps", meaning: "يتخذ خطوات جادة", category: "متلازمات لفظية (Collocations)" },
+            { word: "reach a goal", meaning: "يحقق هدفًا مرغوبًا", category: "متلازمات لفظية (Collocations)" },
+            { word: "give advice", meaning: "يقدم نصيحة مفيدة", category: "متلازمات لفظية (Collocations)" }
+        ];
+
+        const comprehensiveQuestions = [
+            { question: "I need to ...... my voice to know the correct pronunciation of words.", options: ["write", "read", "record", "draw"], correctAnswer: "record" },
+            { question: "It is a good habit to keep a personal ...... to write down what happens to you every day.", options: ["spidergram", "journal", "practice", "communication"], correctAnswer: "journal" },
+            { question: "After finishing the project, the students should ...... on what they have learned.", options: ["reflect", "avoid", "reduce", "miss"], correctAnswer: "reflect" },
+            { question: "A ...... is a detailed way of doing something.", options: ["habit", "game", "tool", "plan"], correctAnswer: "plan" },
+            { question: "To improve my English, I follow a learning plan and ...... my voice to check my pronunciation.", options: ["record", "order", "organize", "see"], correctAnswer: "record" },
+            { question: "...... help me organize and memorize information.", options: ["Styles", "Mind maps", "Letters", "Punctuation"], correctAnswer: "Mind maps" },
+            { question: "Please, list steps you will take to ...... your goals.", options: ["make", "reach", "feel", "discuss"], correctAnswer: "reach" },
+            { question: "What advice would you ...... to someone who wants to be a better learner?", options: ["do", "give", "draw", "clear"], correctAnswer: "give" },
+            { question: "The words '......' and 'exercise' have the same meaning.", options: ["practice", "organize", "include", "prepare"], correctAnswer: "practice" },
+            { question: "The suffix '......' turns the adjective 'clear' into an adverb.", options: ["-ment", "-ous", "-ly", "-ness"], correctAnswer: "-ly" },
+            { question: "Try to improve your skills. The word 'improve' means to make something ...... .", options: ["worse", "better", "incorrect", "unclear"], correctAnswer: "better" },
+            { question: "The word 'clearly' means in a way that is ...... to understand.", options: ["difficult", "bad", "easy", "invisible"], correctAnswer: "easy" },
+            { question: "To achieve your dream, you must ...... positive steps.", options: ["do", "make", "take", "give"], correctAnswer: "take" },
+            { question: "Let's ...... a video about our project.", options: ["read", "do", "make", "write"], correctAnswer: "make" },
+            { question: "Keep going and try again to reach your goal. The synonym of 'try' is '......'.", options: ["neglect", "give up", "attempt", "ignore"], correctAnswer: "attempt" },
+            { question: "The suffix '-ing' in 'teaching' helps to form a/an ...... .", options: ["adjective", "noun", "adverb", "verb"], correctAnswer: "noun" },
+            { question: "Adding '-ion' to 'communicate' forms a grammatical ............", options: ["verb", "adjective", "noun", "adverb"], correctAnswer: "noun" },
+            { question: "The correct pronunciation of English words requires regular ............", options: ["practice", "mistake", "starter", "journal"], correctAnswer: "practice" },
+            { question: "To set down audio or video for digital storage is to ............", options: ["record", "practice", "reflect", "remind"], correctAnswer: "record" },
+            { question: "To ............ means to think carefully or meditate about past experiences.", options: ["reflect", "remind", "discover", "include"], correctAnswer: "reflect" }
+        ];
+
+        let activeTab = 'vocabTab';
+
+        function switchTab(tabId, btn) {
+            activeTab = tabId;
+            clearInterval(timerInterval);
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.nav-tab').forEach(b => {
+                b.classList.remove('bg-white', 'text-indigo-700', 'shadow', 'border-2', 'border-indigo-600');
+                b.classList.add('text-slate-600', 'bg-transparent');
+            });
+            document.getElementById(tabId).classList.remove('hidden');
+            if (btn) {
+                btn.classList.add('bg-white', 'text-indigo-700', 'shadow');
+            }
+
+            document.getElementById('timer').textContent = "60";
+        }
+
+        function renderGrids() {
+            const vGrid = document.getElementById('fullVocabGrid');
+            vGrid.innerHTML = '';
+            allVocabs.forEach(item => {
+                vGrid.innerHTML += `
+                    <div class="bg-slate-50 border p-3 rounded-2xl flex justify-between items-center shadow-sm hover:border-indigo-300 transition">
+                        <div>
+                            <span class="font-bold text-indigo-700" dir="ltr">${item.word}</span>
+                            <div class="text-xs text-slate-500 font-semibold">${item.meaning}</div>
+                        </div>
+                        <button onclick="speakWord('${item.word}')" class="w-9 h-9 rounded-full bg-indigo-600 text-white flex items-center justify-center hover:bg-indigo-700 shadow"><i class="fa-solid fa-volume-high text-xs"></i></button>
+                    </div>
+                `;
+            });
+
+            const eGrid = document.getElementById('extraGrid');
+            eGrid.innerHTML = '';
+            extraData.forEach(item => {
+                eGrid.innerHTML += `
+                    <div class="bg-slate-50 border p-3 rounded-2xl flex justify-between items-center shadow-sm hover:border-indigo-300 transition">
+                        <div>
+                            <span class="font-bold text-indigo-700" dir="ltr">${item.word}</span>
+                            <div class="text-xs text-slate-500 font-semibold">${item.meaning}</div>
+                        </div>
+                        <button onclick="speakWord('${item.word}')" class="w-9 h-9 rounded-full bg-indigo-600 text-white flex items-center justify-center hover:bg-indigo-700 shadow"><i class="fa-solid fa-volume-high text-xs"></i></button>
+                    </div>
+                `;
+            });
+        }
+
+        // Timer Variables
+        let timerInterval = null;
+        let timeLeft = 60;
+
+        // Dictation Test State
+        let dictStudentName = "";
+        let currentIndex = 0;
+        let score = 0;
+        let incorrectCount = 0;
+        let isAnswered = false;
+
+        function startDictationTest() {
+            const nameInput = document.getElementById("dictation-student-name");
+            const nameVal = nameInput.value.trim();
+            const nameParts = nameVal.split(/\s+/);
+
+            if (!nameVal || nameParts.length < 3) {
+                alert("برجاء إدخال اسم الطالب ثلاثياً بشكل صحيح (مثال: محمد أحمد علي).");
+                return;
+            }
+            dictStudentName = nameVal;
+            document.getElementById("display-dict-student").textContent = dictStudentName;
+            document.getElementById("dictation-start-screen").classList.add("hidden");
+            document.getElementById("dictation-quiz-container").classList.remove("hidden");
+            currentIndex = 0;
+            score = 0;
+            incorrectCount = 0;
+            loadDictationQuestion();
+        }
+
+        const meaningText = document.getElementById("meaning-text");
+        const categoryBadge = document.getElementById("category-badge");
+        const userAnswer = document.getElementById("user-answer");
+        const submitBtn = document.getElementById("submit-btn");
+        const timerDisplay = document.getElementById("timer");
+        const questionProgress = document.getElementById("question-progress");
+        const scoreDisplay = document.getElementById("score-display");
+        const quizBody = document.getElementById("quiz-body");
+        const resultScreen = document.getElementById("result-screen");
+        const feedbackBox = document.getElementById("feedback-box");
+
+        function startTimer(callbackOnTimeout) {
+            clearInterval(timerInterval);
+            timeLeft = 60;
+            timerDisplay.textContent = timeLeft;
+            isAnswered = false;
+            feedbackBox.classList.add("hidden");
+            if (document.getElementById("user-answer")) {
+                userAnswer.disabled = false;
+                userAnswer.value = "";
+                userAnswer.focus();
+            }
+
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                timerDisplay.textContent = timeLeft;
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    if (callbackOnTimeout) callbackOnTimeout();
+                }
+            }, 1000);
+        }
+
+        function loadDictationQuestion() {
+            if (currentIndex >= dictationData.length) {
+                showDictationResult();
+                return;
+            }
+            const currentQ = dictationData[currentIndex];
+            meaningText.textContent = currentQ.meaning;
+            categoryBadge.textContent = currentQ.category;
+            questionProgress.textContent = `السؤال ${currentIndex + 1} من ${dictationData.length}`;
+            scoreDisplay.textContent = `الدرجة: ${score}`;
+            submitBtn.textContent = "إرسال الإجابة";
+            submitBtn.setAttribute("onclick", "checkAnswer()");
+
+            startTimer(() => {
+                if (isAnswered) return;
+                isAnswered = true;
+                if (userAnswer) userAnswer.disabled = true;
+                incorrectCount++;
+                feedbackBox.className = "mt-4 p-4 rounded-2xl text-center font-bold text-lg bg-red-50 text-red-700 border border-red-200";
+                feedbackBox.innerHTML = `<i class="fa-solid fa-clock-rotate-left ml-2"></i> انتهى الوقت! الإجابة الصحيحة: <span dir="ltr" class="underline">${currentQ.word}</span>`;
+                feedbackBox.classList.remove("hidden");
+                submitBtn.textContent = "السؤال التالي";
+                submitBtn.setAttribute("onclick", "nextDictationQuestion()");
+            });
+
+            setTimeout(() => speakWord(currentQ.word), 400);
+        }
+
+        function playCurrentDictationWord() {
+            const currentQ = dictationData[currentIndex];
+            if (currentQ) {
+                speakWord(currentQ.word);
+            }
+        }
+
+        function checkAnswer() {
+            if (isAnswered) {
+                nextDictationQuestion();
+                return;
+            }
+            const userText = userAnswer.value.trim().toLowerCase();
+            if (userText === "") return;
+
+            isAnswered = true;
+            clearInterval(timerInterval);
+            userAnswer.disabled = true;
+
+            const currentQ = dictationData[currentIndex];
+            const isCorrect = userText === currentQ.word.toLowerCase();
+
+            if (isCorrect) {
+                score++;
+                feedbackBox.className = "mt-4 p-4 rounded-2xl text-center font-bold text-lg bg-emerald-50 text-emerald-700 border border-emerald-200";
+                feedbackBox.innerHTML = `<i class="fa-solid fa-check-circle ml-2"></i> إجابة صحيحة أبدعت!`;
+            } else {
+                incorrectCount++;
+                feedbackBox.className = "mt-4 p-4 rounded-2xl text-center font-bold text-lg bg-red-50 text-red-700 border border-red-200";
+                feedbackBox.innerHTML = `<i class="fa-solid fa-xmark-circle ml-2"></i> إجابة خاطئة. الصحيحة: <span dir="ltr" class="underline">${currentQ.word}</span>`;
+            }
+
+            feedbackBox.classList.remove("hidden");
+            scoreDisplay.textContent = `الدرجة: ${score}`;
+            submitBtn.textContent = "السؤال التالي";
+            submitBtn.setAttribute("onclick", "nextDictationQuestion()");
+        }
+
+        function nextDictationQuestion() {
+            currentIndex++;
+            loadDictationQuestion();
+        }
+
+        function showDictationResult() {
+            clearInterval(timerInterval);
+            quizBody.classList.add("hidden");
+            resultScreen.classList.remove("hidden");
+            const percentage = Math.round((score / dictationData.length) * 100);
+            document.getElementById("dict-result-details").innerHTML = `
+                <div class="text-lg text-slate-800">الطالب: <span class="text-indigo-600 font-black">${dictStudentName}</span></div>
+                <div class="grid grid-cols-2 gap-2 pt-2">
+                    <div class="bg-emerald-50 p-3 rounded-xl border border-emerald-100">✅ إجابات صحيحة: <span class="font-black text-emerald-700">${score}</span></div>
+                    <div class="bg-rose-50 p-3 rounded-xl border border-rose-100">❌ إجابات خاطئة: <span class="font-black text-rose-700">${incorrectCount}</span></div>
+                </div>
+                <div class="bg-indigo-50 p-3 rounded-xl border border-indigo-100 mt-2">🎯 الدرجة النهائية: <span class="font-black text-indigo-700">${score} / ${dictationData.length} (${percentage}%)</span></div>
+            `;
+        }
+
+        function restartDictation() {
+            clearInterval(timerInterval);
+            document.getElementById("dictation-start-screen").classList.remove("hidden");
+            document.getElementById("dictation-quiz-container").classList.add("hidden");
+            resultScreen.classList.add("hidden");
+            quizBody.classList.remove("hidden");
+            document.getElementById("dictation-student-name").value = "";
+            timerDisplay.textContent = "60";
+        }
+
+        function shareDictationWhatsApp() {
+            const percentage = Math.round((score / dictationData.length) * 100);
+            const message = `📊 نتيجة اختبار التسميع (LingoLearn)%0A👤 الطالب: ${dictStudentName}%0A✅ صحيح: ${score}%0A❌ خطأ: ${incorrectCount}%0A🎯 الدرجة: ${score}/${dictationData.length} (${percentage}%)%0Aإعداد مستر محمد عبد العزيز`;
+            window.open(`https://wa.me/?text=${message}`, '_blank');
+        }
+
+        if (userAnswer) {
+            userAnswer.addEventListener("keypress", function(e) {
+                if (e.key === "Enter") checkAnswer();
+            });
+        }
+
+        // Comprehensive Quiz State
+        let studentName = "";
+        let compIndex = 0;
+        let compScore = 0;
+
+        function startComprehensiveQuiz() {
+            const nameInput = document.getElementById("student-name-input");
+            const nameVal = nameInput.value.trim();
+            const nameParts = nameVal.split(/\s+/);
+
+            if (!nameVal || nameParts.length < 3) {
+                alert("برجاء إدخال اسم الطالب ثلاثياً بشكل صحيح (مثال: محمد أحمد علي).");
+                return;
+            }
+            studentName = nameVal;
+            document.getElementById("display-student-name").textContent = studentName;
+            document.getElementById("quiz-start-screen").classList.add("hidden");
+            document.getElementById("quiz-questions-container").classList.remove("hidden");
+            compIndex = 0;
+            compScore = 0;
+            loadCompQuestion();
+        }
+
+        function loadCompQuestion() {
+            if (compIndex >= comprehensiveQuestions.length) {
+                showCompResult();
+                return;
+            }
+            const q = comprehensiveQuestions[compIndex];
+            document.getElementById("comp-progress-text").textContent = `السؤال ${compIndex + 1} من ${comprehensiveQuestions.length}`;
+            const percent = ((compIndex + 1) / comprehensiveQuestions.length) * 100;
+            document.getElementById("comp-progress-bar").style.width = `${percent}%`;
+            document.getElementById("comp-q-title").textContent = q.question;
+
+            const grid = document.getElementById("comp-options-grid");
+            grid.innerHTML = "";
+            document.getElementById("comp-next-btn").classList.add("hidden");
+
+            const colors = [
+                'bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100', 
+                'bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100', 
+                'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100', 
+                'bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100'
+            ];
+
+            q.options.forEach((opt, idx) => {
+                const btn = document.createElement("button");
+                btn.className = `p-4 rounded-2xl border-2 text-left font-bold text-lg transition flex items-center justify-between shadow-sm ${colors[idx % colors.length]}`;
+                btn.innerHTML = `<span dir="ltr">${opt}</span> <span class="w-8 h-8 rounded-full bg-white flex items-center justify-center text-xs shadow font-black">${String.fromCharCode(65 + idx)}</span>`;
+                btn.onclick = () => selectCompOption(opt, btn);
+                grid.appendChild(btn);
+            });
+
+            // Start 60-second timer for each comprehensive question
+            startTimer(() => {
+                const buttons = document.getElementById("comp-options-grid").getElementsByTagName("button");
+                for (let b of buttons) {
+                    b.disabled = true;
+                    if (b.textContent.includes(q.correctAnswer)) {
+                        b.classList.remove('bg-indigo-50', 'bg-purple-50', 'bg-emerald-50', 'bg-amber-50');
+                        b.classList.add('bg-emerald-600', 'text-white', 'border-emerald-700');
+                    }
+                }
+                document.getElementById("comp-next-btn").classList.remove("hidden");
+            });
+        }
+
+        function selectCompOption(selectedOption, btnElement) {
+            clearInterval(timerInterval);
+            const q = comprehensiveQuestions[compIndex];
+            const buttons = document.getElementById("comp-options-grid").getElementsByTagName("button");
+            
+            for (let b of buttons) {
+                b.disabled = true;
+                if (b.textContent.includes(q.correctAnswer)) {
+                    b.classList.remove('bg-indigo-50', 'bg-purple-50', 'bg-emerald-50', 'bg-amber-50');
+                    b.classList.add('bg-emerald-600', 'text-white', 'border-emerald-700');
+                }
+            }
+
+            if (selectedOption === q.correctAnswer) {
+                compScore++;
+            } else {
+                btnElement.classList.remove('bg-indigo-50', 'bg-purple-50', 'bg-emerald-50', 'bg-amber-50');
+                btnElement.classList.add('bg-rose-600', 'text-white', 'border-rose-700');
+            }
+
+            document.getElementById("comp-next-btn").classList.remove("hidden");
+        }
+
+        function nextCompQuestion() {
+            compIndex++;
+            loadCompQuestion();
+        }
+
+        function showCompResult() {
+            clearInterval(timerInterval);
+            document.getElementById("quiz-questions-container").classList.add("hidden");
+            document.getElementById("comp-result-screen").classList.remove("hidden");
+            document.getElementById("comp-result-student-name").textContent = `الطالب: ${studentName}`;
+            
+            const wrongCount = comprehensiveQuestions.length - compScore;
+            const percentage = Math.round((compScore / comprehensiveQuestions.length) * 100);
+
+            document.getElementById("res-final-score").textContent = `${compScore} / ${comprehensiveQuestions.length}`;
+            document.getElementById("res-correct").textContent = compScore;
+            document.getElementById("res-wrong").textContent = wrongCount;
+            document.getElementById("res-percentage").textContent = `${percentage}%`;
+
+            let msg = "أداء ممتاز! استمر في التقدم والمثابرة.";
+            if (percentage < 50) msg = "حاول مرة أخرى لتطوير مستواك!";
+            else if (percentage >= 90) msg = "مذهل! أنت بطل حقيقي في اللغة الإنجليزية!";
+            document.getElementById("comp-encouragement").textContent = msg;
+        }
+
+        function restartComprehensiveQuiz() {
+            clearInterval(timerInterval);
+            document.getElementById("quiz-start-screen").classList.remove("hidden");
+            document.getElementById("quiz-questions-container").classList.add("hidden");
+            document.getElementById("comp-result-screen").classList.add("hidden");
+            document.getElementById("student-name-input").value = "";
+            timerDisplay.textContent = "60";
+        }
+
+        function restartCurrentTab() {
+            if (activeTab === 'dictationTab') {
+                restartDictation();
+            } else if (activeTab === 'comprehensiveQuizTab') {
+                restartComprehensiveQuiz();
+            } else {
+                alert("اختر تبويب 'اختبار التسميع' أو 'الاختبار الشامل' لإعادة الاختبار.");
+            }
+        }
+
+        function shareWhatsApp() {
+            const wrongCount = comprehensiveQuestions.length - compScore;
+            const percentage = Math.round((compScore / comprehensiveQuestions.length) * 100);
+            const message = `🏆 نتيجة الاختبار الشامل (LingoLearn)%0A👤 الطالب: ${studentName}%0A✅ صحيحة: ${compScore}%0A❌ خاطئة: ${wrongCount}%0A🎯 الدرجة: ${compScore}/${comprehensiveQuestions.length} (${percentage}%)%0Aإعداد مستر محمد عبد العزيز`;
+            window.open(`https://wa.me/?text=${message}`, '_blank');
+        }
+
+        function speakWord(text) {
+            if (!('speechSynthesis' in window)) return;
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'en-GB';
+            
+            const voices = window.speechSynthesis.getVoices();
+            const targetVoice = voices.find(v => v.name === 'Google UK English Male') || voices.find(v => v.lang === 'en-GB' && v.name.includes('Male')) || voices.find(v => v.lang === 'en-GB');
+            
+            if (targetVoice) {
+                utterance.voice = targetVoice;
+            }
+            
+            window.speechSynthesis.speak(utterance);
+        }
+
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.onvoiceschanged = () => {};
+        }
+
+        window.onload = () => {
+            renderGrids();
+        };
+    </script>
+</body>
+</html>
